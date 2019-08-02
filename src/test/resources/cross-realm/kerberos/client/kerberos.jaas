@@ -1,0 +1,9 @@
+KafkaConsumer {
+    com.sun.security.auth.module.Krb5LoginModule required
+    refreshKrb5Config=true 
+    # useKeyTab=true
+    # keyTab="target/test-classes/cross-realm/kerberos/client/kafka_consumer.keytab"
+    # storeKey=true
+    useTicketCache=true
+    principal="kafka_consumer@TARGETREALM.EXAMPLE.COM"
+};
