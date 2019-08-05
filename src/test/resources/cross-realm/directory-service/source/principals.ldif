@@ -1,0 +1,51 @@
+dn: dc=sourcedomain,dc=example,dc=com
+dc: sourcedomain
+objectClass: top
+objectClass: domain
+
+dn: ou=users,dc=sourcedomain,dc=example,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: users
+
+# Kafka User principal.
+dn: uid=kafka,ou=users,dc=sourcedomain,dc=example,dc=com
+objectclass: top
+objectclass: person
+objectclass: inetOrgPerson
+objectclass: krb5Principal
+objectclass: krb5KDCEntry
+cn: kafka
+sn: kafka
+uid: kafka
+userpassword: kafka
+krb5PrincipalName: kafka/host1.example.sourcedomain.com@SOURCEREALM.EXAMPLE.COM
+krb5KeyVersionNumber: 0
+
+# Ticket Granting Service.
+dn: uid=krbtgt,ou=users,dc=sourcedomain,dc=example,dc=com
+objectclass: top
+objectclass: person
+objectclass: inetOrgPerson
+objectclass: krb5Principal
+objectclass: krb5KDCEntry
+cn: KDC Service
+sn: KDC Service
+uid: krbtgt
+userpassword: randomKey
+krb5PrincipalName: krbtgt/sourcedomain.example.com@SOURCEREALM.EXAMPLE.COM
+krb5KeyVersionNumber: 0
+
+# Cross Realm Ticket Granting Service.
+dn: uid=krbtgt_sourcerealm,ou=users,dc=sourcedomain,dc=example,dc=com
+objectclass: top
+objectclass: person
+objectclass: inetOrgPerson
+objectclass: krb5Principal
+objectclass: krb5KDCEntry
+cn: KDC Service
+sn: KDC Service
+uid: krbtgt_sourcerealm
+userpassword: crossrealmpwd@123
+krb5PrincipalName: krbtgt/SOURCEREALM.EXAMPLE.COM@TARGETREALM.EXAMPLE.COM
+krb5KeyVersionNumber: 0

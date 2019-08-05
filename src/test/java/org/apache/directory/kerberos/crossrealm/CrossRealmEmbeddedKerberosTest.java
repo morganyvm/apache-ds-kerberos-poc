@@ -75,6 +75,10 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
 
                 LocalKadmin sourceLocalKadmin;
                 LocalKadmin targetLocalKadmin;
+                
+                System.setProperty("javax.net.debug","all");
+                System.setProperty("sun.security.spnego.debug", "true");
+                System.setProperty("sun.security.krb5.debug", "true");
 
                 // cleanup last run
                 Files.deleteIfExists(KAFKA_CONSUMER_AT_TARGETREALM_KEYTAB_FILE.toPath());
@@ -136,6 +140,7 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
         };
     }
 
+    @SuppressWarnings("restriction")
     @Test
     public void test() throws KrbException {
 
@@ -157,8 +162,6 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
         hiveServiceGrantTicket = krbClient.requestSgt(ticketGrantTicket, HIVE_HOST2_AT_TARGETREALM_PRINCIPAL_NAME);
         assertNotNull(hiveServiceGrantTicket);
 
-        System.setProperty("sun.security.spnego.debug", "true");
-        System.setProperty("sun.security.krb5.debug", "true");
         // setup krb5 conf (see:
         // https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html )
         System.setProperty("java.security.krb5.conf",
