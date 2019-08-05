@@ -1,9 +1,12 @@
 KafkaConsumer {
     com.sun.security.auth.module.Krb5LoginModule required
-    refreshKrb5Config=true 
-    # useKeyTab=true
-    # keyTab="target/test-classes/cross-realm/kerberos/client/kafka_consumer.keytab"
-    # storeKey=true
-    useTicketCache=true
-    principal="kafka_consumer@TARGETREALM.EXAMPLE.COM"
+        refreshKrb5Config=true 
+        useKeyTab=true
+        storeKey=true
+        useTicketCache=true
+        renewTGT=true
+        doNotPrompt=true
+        keyTab="${user.dir}/target/test-classes/cross-realm/kerberos/client/kafka_consumer.keytab"
+        principal="kafka_consumer@TARGETREALM.EXAMPLE.COM"
+        debug=true;
 };

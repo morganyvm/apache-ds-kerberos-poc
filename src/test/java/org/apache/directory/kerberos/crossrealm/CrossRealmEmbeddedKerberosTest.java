@@ -7,6 +7,12 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.PrivilegedAction;
+import java.util.stream.Collectors;
+
+import javax.security.auth.Subject;
+import javax.security.auth.login.LoginContext;
+import javax.security.auth.login.LoginException;
 
 import org.apache.directory.server.core.integ.AbstractLdapTestUnit;
 import org.apache.kerby.kerberos.kerb.KrbException;
@@ -28,7 +34,7 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
     // see:
     // https://web.mit.edu/kerberos/krb5-1.12/doc/admin/conf_files/krb5_conf.html
     private static final String KRB5_CONFIG_ENVIRONMENT_VARIABLE = System.getenv("KRB5_CONFIG");
-    
+
     private static final String SOURCE_REALM_NAME = "SOURCEREALM.EXAMPLE.COM";
     private static final String TARGET_REALM_NAME = "TARGETREALM.EXAMPLE.COM";
     // paths
@@ -36,9 +42,9 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
             .resolve("test-classes").resolve("cross-realm");
 
     private static final Path KERBEROS_ROOT_DIR = BASE_PATH.resolve("kerberos");
-    
+
     private static final Path KERBEROS_CLIENT_CONF_DIR = KERBEROS_ROOT_DIR.resolve("client");
-    
+
     private static final Path KERBEROS_SERVERS_CONF_DIR = KERBEROS_ROOT_DIR.resolve("server");
 
     private static final Path KERBEROS_KDC_SOURCE_DIR = KERBEROS_SERVERS_CONF_DIR.resolve("source");
@@ -58,7 +64,7 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
     private static final String KAFKA_CONSUMER_AT_TARGETREALM_PRINCIPAL_NAME = "kafka_consumer@" + TARGET_REALM_NAME;
 
     // keytabs
-    private static final File KAFKA_CONSUMER_AT_TARGETREALM_KEYTAB_FILE = KERBEROS_KDC_TARGET_DIR
+    private static final File KAFKA_CONSUMER_AT_TARGETREALM_KEYTAB_FILE = KERBEROS_CLIENT_CONF_DIR
             .resolve("kafka_consumer.keytab").toFile();
 
     @Rule
@@ -75,11 +81,27 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
 
                 LocalKadmin sourceLocalKadmin;
                 LocalKadmin targetLocalKadmin;
-                
-                System.setProperty("javax.net.debug","all");
+
+                System.setProperty("java.security.manager", "");
+                System.setProperty("java.security.policy",
+                        KERBEROS_CLIENT_CONF_DIR.resolve("kafka_consumer.policy").toString());
+                // setup krb5 conf (see:
+                // https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html
+                // )
+                System.setProperty("java.security.krb5.conf",
+                        KRB5_CONFIG_ENVIRONMENT_VARIABLE == null
+                                ? KERBEROS_CLIENT_CONF_DIR.resolve("krb5.conf").toString()
+                                : KRB5_CONFIG_ENVIRONMENT_VARIABLE);
+                // see:
+                // https://docs.oracle.com/javase/8/docs/jre/api/security/jaas/spec/com/sun/security/auth/login/ConfigFile.html
+                System.setProperty("java.security.auth.login.config",
+                        KERBEROS_CLIENT_CONF_DIR.resolve("kerberos.jaas").toString());
+                // debug properties
+                System.setProperty("javax.net.debug", "all");
                 System.setProperty("sun.security.spnego.debug", "true");
                 System.setProperty("sun.security.krb5.debug", "true");
-
+                
+                
                 // cleanup last run
                 Files.deleteIfExists(KAFKA_CONSUMER_AT_TARGETREALM_KEYTAB_FILE.toPath());
 
@@ -140,9 +162,8 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
         };
     }
 
-    @SuppressWarnings("restriction")
     @Test
-    public void test() throws KrbException {
+    public void given_Keytab_and_Principal_when_Get_SGT_then_Success() throws KrbException {
 
         TgtTicket ticketGrantTicket;
         SgtTicket kafkaServiceGrantTicket;
@@ -161,18 +182,38 @@ public class CrossRealmEmbeddedKerberosTest extends AbstractLdapTestUnit {
 
         hiveServiceGrantTicket = krbClient.requestSgt(ticketGrantTicket, HIVE_HOST2_AT_TARGETREALM_PRINCIPAL_NAME);
         assertNotNull(hiveServiceGrantTicket);
-
-        // setup krb5 conf (see:
-        // https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html )
-        System.setProperty("java.security.krb5.conf",
-                KRB5_CONFIG_ENVIRONMENT_VARIABLE == null ? KERBEROS_CLIENT_CONF_DIR.resolve("krb5.conf").toString()
-                        : KRB5_CONFIG_ENVIRONMENT_VARIABLE);
-        // see:
-        // https://docs.oracle.com/javase/8/docs/jre/api/security/jaas/spec/com/sun/security/auth/login/ConfigFile.html
-        System.setProperty("java.security.auth.login.config", KERBEROS_CLIENT_CONF_DIR.resolve("kerberos.jaas").toString());
+    }
+    
+    @Test
+    @SuppressWarnings("restriction")
+    public void given_LoginModule_Principal_and_Keytab_when_Runs_PrivilegedAction_with_Same_Subject_then_Sucess() {
+        
         
         try {
+            Subject subject;
+            LoginContext lc;
+            
             sun.security.krb5.Config.refresh();
+            
+            lc = new LoginContext("KafkaConsumer");
+            // authenticate the Subject
+            lc.login();
+            
+            // get the authenticated Subject
+            subject = lc.getSubject();
+            
+            Subject.doAs(subject, (PrivilegedAction<Void>) () -> {
+                
+                System.out.printf("Done by: %1s \n",
+                        subject.getPrincipals().stream().map(p -> p.getName()).collect(Collectors.joining(", ")));
+                
+                return null;
+            });
+            
+            lc.logout();
+            
+        } catch (LoginException e) {
+            fail(e.getMessage());
         } catch (sun.security.krb5.KrbException e) {
             fail(e.getMessage());
         }

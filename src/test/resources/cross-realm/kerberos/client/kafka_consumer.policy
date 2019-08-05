@@ -1,0 +1,1 @@
+CodeBase <ALL>,  Principal javax.security.auth.kerberos.KerberosPrincipal "kafka_consume@TARGETREALM.EXAMPLE.COM"
