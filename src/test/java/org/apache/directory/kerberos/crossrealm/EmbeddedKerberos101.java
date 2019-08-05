@@ -39,8 +39,9 @@ public class EmbeddedKerberos101 extends AbstractLdapTestUnit {
     private static final Path BASE_PATH = Paths.get(System.getProperty("user.dir")).resolve("target")
             .resolve("test-classes");
 
-    private static final Path KERBEROS_CONF_DIR = BASE_PATH.resolve("single-realm").resolve("kerberos")
-            .resolve("client");
+    private static final Path KERBEROS_CONF_DIR = BASE_PATH.resolve("single-realm").resolve("kerberos");
+    
+    private static final Path KERBEROS_CLIENT_CONF_DIR = KERBEROS_CONF_DIR.resolve("client");
 
     public void beforeClass() {
 
@@ -51,7 +52,7 @@ public class EmbeddedKerberos101 extends AbstractLdapTestUnit {
 
         // see:
         // https://docs.oracle.com/javase/8/docs/jre/api/security/jaas/spec/com/sun/security/auth/login/ConfigFile.html
-        System.setProperty("java.security.auth.login.config", KERBEROS_CONF_DIR.resolve("kerberos.jaas").toString());
+        System.setProperty("java.security.auth.login.config", KERBEROS_CLIENT_CONF_DIR.resolve("kerberos.jaas").toString());
     }
 
     @Test
